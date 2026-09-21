@@ -343,7 +343,7 @@ function processParagraph(p, lookup, strips) {
         if (isWord(full.charAt(mm.index - 1))) rep = ' ' + rep;
         if (isWord(full.charAt(mm.index + mm[0].length))) rep += ' ';
       }
-      edits.push({ s: mm.index, e: mm.index + mm[0].length, rep });
+      edits.push({ s: mm.index, e: mm.index + mm[0].length, rep, tag: rep !== '' });
     }
   }
   // عبارات تُحذف (مع ضبط المسافات حولها)
@@ -360,26 +360,54 @@ function processParagraph(p, lookup, strips) {
   if (!edits.length) return p;
   edits.sort((x, y) => x.s - y.s);
   let a = 0;
-  const newTexts = ts.map((t) => {
+  const marked = new Set();
+  const newTexts = ts.map((t, ti) => {
     const b = a + t.text.length;
     let cur = a, res = '';
     for (const g of edits) {
       if (g.e <= a || g.s >= b) continue;
       const s = Math.max(g.s, a, cur), e = Math.min(g.e, b);
       res += full.slice(cur, s);
-      if (g.s >= a) res += g.rep;
+      if (g.s >= a) { res += g.rep; if (g.tag) marked.add(ti); }
       cur = Math.max(cur, e);
     }
     res += full.slice(cur, b);
     a = b;
     return res;
   });
+  const positions = [];
   let out = '', last = 0;
   ts.forEach((t, i) => {
-    out += p.slice(last, t.s) + '<w:t xml:space="preserve">' + newTexts[i] + '</w:t>';
+    out += p.slice(last, t.s);
+    positions.push(out.length);
+    out += '<w:t xml:space="preserve">' + newTexts[i] + '</w:t>';
     last = t.e;
   });
-  return out + p.slice(last);
+  out += p.slice(last);
+  return marked.size ? addRtl(out, [...marked].map((i) => positions[i])) : out;
+}
+
+/* يجعل المقاطع المعبّأة من نوع «من اليمين لليسار» ليصحّ ترتيب التواريخ والأرقام في Word */
+function addRtl(xml, poss) {
+  const starts = new Set();
+  poss.forEach((pos) => {
+    const rs = Math.max(xml.lastIndexOf('<w:r>', pos), xml.lastIndexOf('<w:r ', pos));
+    if (rs >= 0) starts.add(rs);
+  });
+  [...starts].sort((x, y) => y - x).forEach((rs) => {
+    const openEnd = xml.indexOf('>', rs) + 1;
+    if (xml.startsWith('<w:rPr>', openEnd)) {
+      const close = xml.indexOf('</w:rPr>', openEnd);
+      const inner = xml.slice(openEnd + 7, close);
+      if (/<w:rtl[\s/>]/.test(inner)) return;
+      const m = /<w:(cs|em|lang|eastAsianLayout|specVanish|oMath)[\s/>]/.exec(inner);
+      const at = openEnd + 7 + (m ? m.index : inner.length);
+      xml = xml.slice(0, at) + '<w:rtl/>' + xml.slice(at);
+    } else {
+      xml = xml.slice(0, openEnd) + '<w:rPr><w:rtl/></w:rPr>' + xml.slice(openEnd);
+    }
+  });
+  return xml;
 }
 const processParas = (xml, lookup, strips) => xml.replace(PARA_RE, (p) => processParagraph(p, lookup, strips));
 

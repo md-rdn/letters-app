@@ -212,9 +212,9 @@ input:focus-visible, select:focus-visible, button:focus-visible, .letter:has(inp
     <div class="opts">
       <label>صيغة التاريخ
         <select id="fmt">
-          <option value="num">15/03/2026</option>
+          <option value="num">15/03/2026م</option>
           <option value="txt">15 مارس 2026م</option>
-          <option value="iso">2026/03/15</option>
+          <option value="iso">2026/03/15م</option>
         </select>
       </label>
       <label><input type="checkbox" id="noteChk" checked> حذف سطر «يطبع على ورق ... الرسمي» من الناتج</label>
@@ -599,8 +599,8 @@ function fmtDate(iso, style) {
   if (!p) return '';
   if (style === 'txt') return `${p.d} ${AR_MONTHS[p.mo - 1]} ${p.y}م`;
   if (style === 'txt2') return `${pad2(p.d)} ${AR_MONTHS[p.mo - 1]} ${p.y}م`;
-  if (style === 'iso') return `${p.y}/${pad2(p.mo)}/${pad2(p.d)}`;
-  return `${pad2(p.d)}/${pad2(p.mo)}/${p.y}`;
+  if (style === 'iso') return `${p.y}/${pad2(p.mo)}/${pad2(p.d)}م`;
+  return `${pad2(p.d)}/${pad2(p.mo)}/${p.y}م`;
 }
 /* بداية السنة المالية المقترحة: اليوم التالي لنهاية السنة قبل سنة */
 function startFromEnd(iso) {
@@ -1035,7 +1035,7 @@ const TEMPLATES = {
 
   function coverDate() {
     const p = parseISO(state.yearEnd);
-    return p ? `للسنة المنتهية في ${toArDigits(p.d)} ${AR_MONTHS[p.mo - 1]} ${toArDigits(p.y)}` : '';
+    return p ? `للسنة المنتهية في ${toArDigits(p.d)} ${AR_MONTHS[p.mo - 1]} ${toArDigits(p.y)}م` : '';
   }
   function fitCover() {
     const outer = $('cvPrevOuter');
